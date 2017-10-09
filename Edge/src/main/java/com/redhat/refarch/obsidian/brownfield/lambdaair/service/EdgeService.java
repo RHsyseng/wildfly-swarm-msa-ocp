@@ -20,6 +20,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import io.opentracing.util.GlobalTracer;
+
 @WebServlet( name = "Edge", urlPatterns = "/*" )
 public class EdgeService extends HttpServlet
 {
@@ -31,7 +33,7 @@ public class EdgeService extends HttpServlet
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
-		logger.fine( "Caller IP address is " + request.getHeader( "uberctx-forwarded-for" ) );
+		logger.fine( "Caller IP address is " + GlobalTracer.get().activeSpan().getBaggageItem( "forwarded-for" ) ); //TODO inject tracer?
 		String fullPath = request.getPathInfo();
 		logger.fine( "Path " + fullPath );
 		String[] segments = getPathSegments( fullPath );
@@ -39,7 +41,7 @@ public class EdgeService extends HttpServlet
 		String query = request.getQueryString();
 		logger.fine( "Query " + query );
 
-		String url = getHost( request, segments[0] ) + segments[1];
+		String url = getHost( segments[0] ) + segments[1];
 		if( query != null )
 		{
 			url += "?" + query;
@@ -64,7 +66,7 @@ public class EdgeService extends HttpServlet
 		{
 			if( headerEntry.getKey() == null )
 			{
-				logger.fine( "Response header null: " + headerEntry.getValue());
+				logger.fine( "Response header null: " + headerEntry.getValue() );
 				continue;
 			}
 			for( String value : headerEntry.getValue() )
@@ -126,7 +128,7 @@ public class EdgeService extends HttpServlet
 		String query = request.getQueryString();
 		logger.fine( "Query " + query );
 
-		String url = getHost( request, segments[0] ) + segments[1];
+		String url = getHost( segments[0] ) + segments[1];
 		if( query != null )
 		{
 			url += "?" + query;
@@ -158,7 +160,7 @@ public class EdgeService extends HttpServlet
 		{
 			if( headerEntry.getKey() == null )
 			{
-				logger.fine( "Response header null: " + headerEntry.getValue());
+				logger.fine( "Response header null: " + headerEntry.getValue() );
 				continue;
 			}
 			for( String value : headerEntry.getValue() )
@@ -178,17 +180,18 @@ public class EdgeService extends HttpServlet
 		}
 	}
 
-	private String getHost(HttpServletRequest request, String context)
+	private String getHost(String context)
 	{
 		String host = mapping.getHost( context );
 		if( "sales".equals( context ) )
 		{
 			try
 			{
-				String callerIP = request.getHeader( "uberctx-forwarded-for" );
+				String callerIP = GlobalTracer.get().activeSpan().getBaggageItem( "forwarded-for" ); //TODO inject tracer?
 				int lastDigit = Integer.parseInt( callerIP.substring( callerIP.length() - 1 ) );
 				if( lastDigit % 2 == 0 )
 				{
+					logger.info( "Will redirect request for A/B testing" );
 					host = "http://sales2:8080";
 				}
 			}

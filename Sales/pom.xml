@@ -7,95 +7,75 @@
     <groupId>com.redhat.refarch.obsidian.brownfield.lambdaair</groupId>
     <artifactId>sales</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <packaging>jar</packaging>
+    <packaging>war</packaging>
 
     <name>Lambda Air</name>
     <description>Lambda Air Flight Sales System</description>
 
     <properties>
+        <version.wildfly.swarm>2017.10.0</version.wildfly.swarm>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <failOnMissingWebXml>false</failOnMissingWebXml>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <java.version>1.8</java.version>
-        <maven.compiler.plugin.version>3.6.1</maven.compiler.plugin.version>
         <fabric8.maven.plugin.version>3.5.30</fabric8.maven.plugin.version>
         <fabric8.resources.requests.memory>64Mi</fabric8.resources.requests.memory>
         <fabric8.generator.from>registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift</fabric8.generator.from>
-        <spring-boot.bom.version>2</spring-boot.bom.version>
-        <springboot.version>1.4.1.RELEASE</springboot.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.jboss.snowdrop</groupId>
-                <artifactId>spring-boot-1.4-bom</artifactId>
-                <version>${spring-boot.bom.version}</version>
-                <type>pom</type>
+                <groupId>org.wildfly.swarm</groupId>
+                <artifactId>bom-all</artifactId>
+                <version>${version.wildfly.swarm}</version>
                 <scope>import</scope>
+                <type>pom</type>
             </dependency>
         </dependencies>
     </dependencyManagement>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.wildfly.swarm</groupId>
+                <artifactId>wildfly-swarm-plugin</artifactId>
+                <version>${version.wildfly.swarm}</version>
+
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>package</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
     <dependencies>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-sleuth-zipkin</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
-            <version>1.5.6.RELEASE</version>
-        </dependency>
-
-        <!--To support Java 8 Date format serialization-->
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>2.8.8</version>
-        </dependency>
-
         <dependency>
             <groupId>net.sf.opencsv</groupId>
             <artifactId>opencsv</artifactId>
             <version>2.3</version>
         </dependency>
 
+        <!-- Java EE 7 dependency -->
         <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-ribbon</artifactId>
+            <groupId>javax</groupId>
+            <artifactId>javaee-api</artifactId>
+            <version>7.0</version>
+            <scope>provided</scope>
         </dependency>
-
+        <!-- WildFly Swarm Fractions -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <groupId>org.wildfly.swarm</groupId>
+            <artifactId>jaxrs</artifactId>
         </dependency>
+        <!-- Jaeger OpenTracing -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-tomcat</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-
-        <!-- Tomcat -->
-        <dependency>
-            <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-el</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-websocket</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.tomcat</groupId>
-            <artifactId>tomcat-juli</artifactId>
+            <groupId>org.wildfly.swarm</groupId>
+            <artifactId>jaeger</artifactId>
         </dependency>
     </dependencies>
 
@@ -104,18 +84,14 @@
             <id>openshift</id>
             <build>
                 <plugins>
-
                     <plugin>
-                        <groupId>org.springframework.boot</groupId>
-                        <artifactId>spring-boot-maven-plugin</artifactId>
-                        <version>${springboot.version}</version>
-                        <configuration>
-                            <classifier>exec</classifier>
-                        </configuration>
+                        <groupId>org.wildfly.swarm</groupId>
+                        <artifactId>wildfly-swarm-plugin</artifactId>
+                        <version>${version.wildfly.swarm}</version>
                         <executions>
                             <execution>
                                 <goals>
-                                    <goal>repackage</goal>
+                                    <goal>package</goal>
                                 </goals>
                             </execution>
                         </executions>
@@ -127,25 +103,6 @@
                         <version>${fabric8.maven.plugin.version}</version>
 
                         <configuration>
-
-                            <resources>
-                                <labels>
-                                    <all>
-                                        <testProject>spring-boot-sample</testProject>
-                                    </all>
-                                </labels>
-                            </resources>
-
-                            <generator>
-                                <includes>
-                                    <include>spring-boot</include>
-                                </includes>
-                                <config>
-                                    <spring-boot>
-                                        <color>always</color>
-                                    </spring-boot>
-                                </config>
-                            </generator>
                             <enricher>
                                 <excludes>
                                     <exclude>f8-expose</exclude>
@@ -166,16 +123,6 @@
                                 </goals>
                             </execution>
                         </executions>
-                    </plugin>
-
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-compiler-plugin</artifactId>
-                        <version>${maven.compiler.plugin.version}</version>
-                        <configuration>
-                            <source>${java.version}</source>
-                            <target>${java.version}</target>
-                        </configuration>
                     </plugin>
                 </plugins>
             </build>

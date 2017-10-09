@@ -2,29 +2,31 @@ package com.redhat.refarch.obsidian.brownfield.lambdaair.airports.service;
 
 import com.redhat.refarch.obsidian.brownfield.lambdaair.airports.model.Airport;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.sleuth.Tracer;
-import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Locale;
 
-@RestController
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+import io.opentracing.util.GlobalTracer;
+
+@Path("/")
 public class Controller
 {
-	@Autowired
-	private Tracer tracer;
 
-	@RequestMapping( value = "/airports", method = RequestMethod.GET )
-	public Collection<Airport> airports(@RequestParam( value = "filter", required = false ) String filter)
+	@GET
+	@Path("/airports")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Collection<Airport> airports(@QueryParam( "filter" ) String filter)
 	{
-		tracer.addTag( "Operation", "Look Up Airports" );
-		if( StringUtils.isEmpty( filter ) )
+		GlobalTracer.get().activeSpan().setTag( "Operation", "Look Up Airports" );//TODO inject?
+		if( filter == null || filter.isEmpty() )
 		{
 			return AirportsService.getAirports();
 		}
@@ -34,10 +36,12 @@ public class Controller
 		}
 	}
 
-	@RequestMapping( value = "/airports/{code}", method = RequestMethod.GET )
-	public Airport getAirport(@PathVariable( "code" ) String code)
+	@GET
+	@Path("/airports/{code}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Airport getAirport(@PathParam("code") String code)
 	{
-		tracer.addTag( "Operation", "Look Up Single Airport" );
+		GlobalTracer.get().activeSpan().setTag( "Operation", "Look Up Single Airport" );//TODO inject?
 		return AirportsService.getAirport( code.toUpperCase( Locale.US ) );
 	}
 }

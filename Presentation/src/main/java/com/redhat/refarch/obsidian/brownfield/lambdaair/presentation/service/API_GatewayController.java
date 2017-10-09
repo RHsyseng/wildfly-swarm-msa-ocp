@@ -8,19 +8,7 @@ import com.redhat.refarch.obsidian.brownfield.lambdaair.presentation.model.Fligh
 import com.redhat.refarch.obsidian.brownfield.lambdaair.presentation.model.FlightSegment;
 import com.redhat.refarch.obsidian.brownfield.lambdaair.presentation.model.Itinerary;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
-import org.springframework.cloud.netflix.ribbon.RibbonClient;
-import org.springframework.cloud.netflix.ribbon.RibbonClients;
-import org.springframework.cloud.sleuth.Span;
-import org.springframework.cloud.sleuth.Tracer;
-import org.springframework.context.annotation.Bean;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
+import org.wildfly.swarm.spi.runtime.annotations.ConfigurationValue;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -31,42 +19,49 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import javax.enterprise.context.RequestScoped;
+import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 
+import io.opentracing.ActiveSpan;
+import io.opentracing.NoopActiveSpanSource;
+import io.opentracing.util.GlobalTracer;
 import rx.Observable;
 
-@org.springframework.web.bind.annotation.RestController
-@RibbonClients( {@RibbonClient( name = "airports" ), @RibbonClient( name = "flights" ), @RibbonClient( name = "sales" )} )
+import static com.redhat.refarch.obsidian.brownfield.lambdaair.presentation.service.RestClient.getWebTarget;
+import static com.redhat.refarch.obsidian.brownfield.lambdaair.presentation.service.RestClient.invokeGet;
+import static com.redhat.refarch.obsidian.brownfield.lambdaair.presentation.service.RestClient.invokePost;
+
+@Path("/")
+@RequestScoped
 public class API_GatewayController
 {
 	private static Logger logger = Logger.getLogger( API_GatewayController.class.getName() );
 
-	@LoadBalanced
-	@Bean
-	RestTemplate restTemplate()
-	{
-		return new RestTemplate();
-	}
-
-	@Autowired
-	private RestTemplate restTemplate;
-
-	@Value("${hystrix.threadpool.SalesThreads.coreSize}")
+	@Inject
+	@ConfigurationValue( "hystrix.threadpool.SalesThreads.coreSize" )
 	private int threadSize;
 
-	@Autowired
-	private Tracer tracer;
-
-	@RequestMapping( value = "/airportCodes", method = RequestMethod.GET )
-	public String[] airports()
+	@GET
+	@Path("/airportCodes")
+	@Produces( MediaType.APPLICATION_JSON)
+	public String[] airports() throws HttpErrorException, ProcessingException
 	{
-		tracer.addTag( "Operation", "Look Up Airport Codes" );
-		Airport[] airports = restTemplate.getForObject( "http://zuul/airports/airports", Airport[].class );
+		GlobalTracer.get().activeSpan().setTag( "Operation", "Look Up Airport Codes" );//TODO inject?
+		WebTarget webTarget = getWebTarget( "airports", "airports" );
+		Airport[] airports = invokeGet( webTarget, Airport[].class );
 		String[] airportDescriptors = new String[airports.length];
 		for( int index = 0; index < airportDescriptors.length; index++ )
 		{
@@ -76,18 +71,20 @@ public class API_GatewayController
 		return airportDescriptors;
 	}
 
-	@RequestMapping( value = "/query", method = RequestMethod.GET )
-	public List<Itinerary> query(@RequestParam( "departureDate" ) String departureDate, @RequestParam( required = false, value = "returnDate" ) String returnDate, @RequestParam( "origin" ) String origin, @RequestParam( "destination" ) String destination, HttpServletRequest request)
+	@GET
+	@Path("/query")
+	@Produces( MediaType.APPLICATION_JSON)
+	public List<Itinerary> query(@QueryParam( "departureDate" ) String departureDate, @QueryParam( "returnDate" ) String returnDate, @QueryParam( "origin" ) String origin, @QueryParam( "destination" ) String destination, @Context HttpServletRequest request) throws HttpErrorException, ProcessingException
 	{
-		tracer.addTag( "Operation", "Itinerary Query" );
-		Span querySpan = tracer.createSpan( "Itinerary Query" );
+		ActiveSpan querySpan = GlobalTracer.get().activeSpan(); //TODO inject tracer?
+		querySpan.setTag( "Operation", "Itinerary Query" );
 		querySpan.setBaggageItem( "forwarded-for", request.getHeader( "x-forwarded-for" ) );
 		long queryTime = System.currentTimeMillis();
-		UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl("http://zuul" ).pathSegment( "flights", "query" );
-		builder.queryParam( "date", departureDate );
-		builder.queryParam( "origin", origin );
-		builder.queryParam( "destination", destination );
-		Flight[] departingFlights = restTemplate.getForObject( builder.toUriString(), Flight[].class );
+		WebTarget webTarget = getWebTarget( "flights", "query" );
+		webTarget = webTarget.queryParam( "date", departureDate );
+		webTarget = webTarget.queryParam( "origin", origin );
+		webTarget = webTarget.queryParam( "destination", destination );
+		Flight[] departingFlights = invokeGet( webTarget, Flight[].class );
 		logger.info( "Found " + departingFlights.length + " departing flights" );
 		Map<String, Airport> airports = getAirportMap();
 		populateFormattedTimes( departingFlights, airports );
@@ -99,10 +96,10 @@ public class API_GatewayController
 		}
 		else
 		{
-			builder.replaceQueryParam( "date", returnDate );
-			builder.replaceQueryParam( "origin", destination );
-			builder.replaceQueryParam( "destination", origin );
-			Flight[] returnFlights = restTemplate.getForObject( builder.toUriString(), Flight[].class );
+			webTarget = webTarget.queryParam( "date", returnDate );
+			webTarget = webTarget.queryParam( "origin", destination );
+			webTarget = webTarget.queryParam( "destination", origin );
+			Flight[] returnFlights = invokeGet( webTarget, Flight[].class );
 			logger.info( "Found " + returnFlights.length + " returning flights" );
 			populateFormattedTimes( returnFlights, airports );
 			List<Itinerary> returningItineraries = getPricing( departingFlights );
@@ -121,44 +118,45 @@ public class API_GatewayController
 		pricedItineraries.sort( Itinerary.priceComparator );
 		logger.info( "Returning " + pricedItineraries.size() + " flights" );
 		logger.info("Query method took " + (System.currentTimeMillis() - queryTime) + " milliseconds in total!" );
-		tracer.close( querySpan );
 		return pricedItineraries;
 	}
 
 	private @NotNull List<Itinerary> getPricing(Flight[] itineraries)
 	{
-		Span pricingSpan = tracer.createSpan( "Itinerary Pricing" );
-		long pricingTime = System.currentTimeMillis();
-		List<Itinerary> pricedItineraries = new ArrayList<>();
-		for( int index = 0; index < itineraries.length; )
+		try( ActiveSpan pricingSpan = GlobalTracer.get().buildSpan( "Itinerary Pricing" ).startActive() ) //TODO inject tracer?
 		{
-			List<Observable<Itinerary>> observables = new ArrayList<>();
-			int batchLimit = Math.min( index + threadSize, itineraries.length );
-			for( int batchIndex = index; batchIndex < batchLimit; batchIndex++ )
+			long pricingTime = System.currentTimeMillis();
+			List<Itinerary> pricedItineraries = new ArrayList<>();
+			for( int index = 0; index < itineraries.length; )
 			{
-				observables.add( new PricingCall( itineraries[batchIndex] ).toObservable() );
-			}
-			logger.info("Will price a batch of " + observables.size() + " tickets");
-			Observable<Itinerary[]> zipped = Observable.zip( observables, objects->
-			{
-				Itinerary[] priced = new Itinerary[objects.length];
-				for( int batchIndex = 0; batchIndex < objects.length; batchIndex++ )
+				List<Observable<Itinerary>> observables = new ArrayList<>();
+				int batchLimit = Math.min( index + threadSize, itineraries.length );
+				for( int batchIndex = index; batchIndex < batchLimit; batchIndex++ )
 				{
-					priced[batchIndex] = (Itinerary)objects[batchIndex];
+					observables.add( new PricingCall( itineraries[batchIndex], pricingSpan ).toObservable() );
 				}
-				return priced;
-			} );
-			Collections.addAll( pricedItineraries, zipped.toBlocking().first() );
-			index += threadSize;
+				logger.info("Will price a batch of " + observables.size() + " tickets");
+				Observable<Itinerary[]> zipped = Observable.zip( observables, objects->
+				{
+					Itinerary[] priced = new Itinerary[objects.length];
+					for( int batchIndex = 0; batchIndex < objects.length; batchIndex++ )
+					{
+						priced[batchIndex] = (Itinerary)objects[batchIndex];
+					}
+					return priced;
+				} );
+				Collections.addAll( pricedItineraries, zipped.toBlocking().first() );
+				index += threadSize;
+			}
+			logger.info("It took " + (System.currentTimeMillis() - pricingTime) + " milliseconds to price "  + itineraries.length + " tickets");
+			return pricedItineraries;
 		}
-		logger.info("It took " + (System.currentTimeMillis() - pricingTime) + " milliseconds to price "  + itineraries.length + " tickets");
-		tracer.close( pricingSpan );
-		return pricedItineraries;
 	}
 
-	private Map<String, Airport> getAirportMap()
+	private Map<String, Airport> getAirportMap() throws HttpErrorException, ProcessingException
 	{
-		Airport[] airports = restTemplate.getForObject( "http://zuul/airports/airports", Airport[].class );
+		WebTarget webTarget = getWebTarget( "airports", "airports" );
+		Airport[] airports = invokeGet( webTarget, Airport[].class );
 		return Arrays.stream( airports ).collect( Collectors.toMap( Airport::getCode, airport -> airport ) );
 	}
 
@@ -185,24 +183,22 @@ public class API_GatewayController
 	private class PricingCall extends HystrixCommand<Itinerary>
 	{
 		private Flight flight;
+		private ActiveSpan.Continuation continuation;
 
-		PricingCall(Flight flight)
+		PricingCall(Flight flight, ActiveSpan activeSpan)
 		{
 			super( HystrixCommandGroupKey.Factory.asKey( "Sales" ), HystrixThreadPoolKey.Factory.asKey( "SalesThreads" ) );
 			this.flight = flight;
+			this.continuation = activeSpan != null ? activeSpan.capture() : NoopActiveSpanSource.NoopContinuation.INSTANCE;
 		}
 
 		@Override
-		protected Itinerary run() throws Exception
+		protected Itinerary run() throws HttpErrorException, ProcessingException
 		{
-			try
+			try( ActiveSpan activeSpan = continuation.activate() )
 			{
-				return restTemplate.postForObject( "http://zuul/sales/price", flight, Itinerary.class );
-			}
-			catch( Exception e )
-			{
-				logger.log( Level.SEVERE, "Failed!", e );
-				throw e;
+				WebTarget webTarget = getWebTarget( "sales", "price" );
+				return invokePost( webTarget, flight, Itinerary.class );
 			}
 		}
 

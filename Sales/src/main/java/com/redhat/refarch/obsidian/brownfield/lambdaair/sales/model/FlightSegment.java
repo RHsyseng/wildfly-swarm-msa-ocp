@@ -1,13 +1,19 @@
 package com.redhat.refarch.obsidian.brownfield.lambdaair.sales.model;
 
+import com.redhat.refarch.obsidian.brownfield.lambdaair.sales.jaxb.InstantAdapter;
+
 import java.time.Instant;
+
+import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 public class FlightSegment
 {
 	private int flightNumber;
 	private String departureAirport;
+	@XmlJavaTypeAdapter(InstantAdapter.class)
 	private Instant departureTime;
 	private String arrivalAirport;
+	@XmlJavaTypeAdapter(InstantAdapter.class)
 	private Instant arrivalTime;
 	private String formattedDepartureTime;
 	private String formattedArrivalTime;

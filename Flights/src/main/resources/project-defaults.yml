@@ -1,0 +1,10 @@
+service:
+  airports:
+    baseUrl: http://edge:8080/airports
+
+JAEGER_AGENT_HOST: jaeger-agent
+JAEGER_AGENT_PORT: 6831
+JAEGER_SERVICE_NAME: flights
+JAEGER_REPORTER_LOG_SPANS: true
+JAEGER_SAMPLER_TYPE: const
+JAEGER_SAMPLER_PARAM: 1

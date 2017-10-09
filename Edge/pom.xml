@@ -5,15 +5,15 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.redhat.refarch.obsidian.brownfield.lambdaair</groupId>
-    <artifactId>presentation</artifactId>
+    <artifactId>edge</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>war</packaging>
 
     <name>Lambda Air</name>
-    <description>Lambda Air Reservation System Presentation Tier</description>
+    <description>Lambda Air Gateway Service</description>
 
     <properties>
-        <version.wildfly.swarm>2017.10.0</version.wildfly.swarm>
+        <version.wildfly.swarm>2017.8.1</version.wildfly.swarm>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <failOnMissingWebXml>false</failOnMissingWebXml>
@@ -64,13 +64,8 @@
         <!-- WildFly Swarm Fractions -->
         <dependency>
             <groupId>org.wildfly.swarm</groupId>
-            <artifactId>jaxrs</artifactId>
+            <artifactId>undertow</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.wildfly.swarm</groupId>
-            <artifactId>hystrix</artifactId>
-        </dependency>
-        <!-- CDI needed to inject system properties with @RequestScoped -->
         <dependency>
             <groupId>org.wildfly.swarm</groupId>
             <artifactId>cdi</artifactId>
@@ -79,16 +74,6 @@
         <dependency>
             <groupId>org.wildfly.swarm</groupId>
             <artifactId>jaeger</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.opentracing.contrib</groupId>
-            <artifactId>opentracing-jaxrs2</artifactId>
-            <version>0.0.9</version>
-        </dependency>
-        <dependency>
-            <groupId>io.opentracing</groupId>
-            <artifactId>opentracing-noop</artifactId>
-            <version>0.30.0</version>
         </dependency>
     </dependencies>
 

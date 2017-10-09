@@ -5,17 +5,6 @@ import com.redhat.refarch.obsidian.brownfield.lambdaair.flights.model.Flight;
 import com.redhat.refarch.obsidian.brownfield.lambdaair.flights.model.FlightSchedule;
 import com.redhat.refarch.obsidian.brownfield.lambdaair.flights.model.FlightSegment;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.client.loadbalancer.LoadBalanced;
-import org.springframework.cloud.netflix.ribbon.RibbonClient;
-import org.springframework.cloud.sleuth.Tracer;
-import org.springframework.context.annotation.Bean;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.client.RestTemplate;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -29,32 +18,34 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-@RestController
-@RibbonClient( name = "airports" )
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
+
+import io.opentracing.util.GlobalTracer;
+
+import static com.redhat.refarch.obsidian.brownfield.lambdaair.flights.service.RestClient.getWebTarget;
+import static com.redhat.refarch.obsidian.brownfield.lambdaair.flights.service.RestClient.invokeGet;
+
+@Path("/")
 public class Controller
 {
 	private static Logger logger = Logger.getLogger( Controller.class.getName() );
 	private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern( "yyyyMMdd" );
 
-	@LoadBalanced
-	@Bean
-	RestTemplate restTemplate()
+	@GET
+	@Path("/query")
+	@Produces( MediaType.APPLICATION_JSON)
+	public List<Flight> query(@QueryParam( "date" ) String date, @QueryParam( "origin" ) String origin, @QueryParam( "destination" ) String destination) throws HttpErrorException, ProcessingException
 	{
-		return new RestTemplate();
-	}
-
-	@Autowired
-	private RestTemplate restTemplate;
-
-	@Autowired
-	private Tracer tracer;
-
-	@RequestMapping( value = "/query", method = RequestMethod.GET )
-	public List<Flight> query(@RequestParam( "date" ) String date, @RequestParam( "origin" ) String origin, @RequestParam( "destination" ) String destination)
-	{
-		tracer.addTag( "Operation", "Look Up Flights" );
+		GlobalTracer.get().activeSpan().setTag( "Operation", "Look Up Flights" );//TODO inject?
 		Map<String, Airport> airports = new HashMap<>();
-		Airport[] airportArray = restTemplate.getForObject( "http://zuul/airports/airports", Airport[].class );
+		WebTarget webTarget = getWebTarget( "airports", "airports" );
+		Airport[] airportArray = invokeGet( webTarget, Airport[].class );
 		for( Airport airport : airportArray )
 		{
 			airports.put( airport.getCode(), airport );

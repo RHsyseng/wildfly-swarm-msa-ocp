@@ -1,10 +1,13 @@
 package com.redhat.refarch.obsidian.brownfield.lambdaair.presentation.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.Comparator;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Itinerary
 {
 	private static NumberFormat priceFormat = new DecimalFormat( "$#,##0" );

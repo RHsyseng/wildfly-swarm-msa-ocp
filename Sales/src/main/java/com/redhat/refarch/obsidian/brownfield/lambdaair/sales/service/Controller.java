@@ -3,29 +3,30 @@ package com.redhat.refarch.obsidian.brownfield.lambdaair.sales.service;
 import com.redhat.refarch.obsidian.brownfield.lambdaair.sales.model.Flight;
 import com.redhat.refarch.obsidian.brownfield.lambdaair.sales.model.Itinerary;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.sleuth.Tracer;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
-
 import java.time.format.DateTimeFormatter;
 import java.util.logging.Logger;
 
-@RestController
+import javax.ws.rs.Consumes;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+
+import io.opentracing.util.GlobalTracer;
+
+@Path("/")
 public class Controller
 {
 	private static Logger logger = Logger.getLogger( Controller.class.getName() );
 	private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern( "yyyyMMdd" );
 
-	@Autowired
-	private Tracer tracer;
-
-	@RequestMapping( value = "/price", method = RequestMethod.POST )
-	public Itinerary price(@RequestBody Flight flight)
+	@POST
+	@Path("/price")
+	@Consumes( MediaType.APPLICATION_JSON)
+	@Produces( MediaType.APPLICATION_JSON)
+	public Itinerary price(Flight flight)
 	{
-		tracer.addTag( "Operation", "Determine Price for a Flight" );
+		GlobalTracer.get().activeSpan().setTag( "Operation", "Determine Price for a Flight" );//TODO inject?
 		Itinerary itinerary = SalesTicketingService.price( flight );
 		logger.info("Priced ticket at " + itinerary.getPrice() );
 		return itinerary;

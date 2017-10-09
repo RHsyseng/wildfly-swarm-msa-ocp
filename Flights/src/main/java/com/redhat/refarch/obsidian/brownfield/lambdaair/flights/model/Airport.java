@@ -1,7 +1,10 @@
 package com.redhat.refarch.obsidian.brownfield.lambdaair.flights.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import java.time.ZoneId;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Airport
 {
 	private String code;

@@ -1,0 +1,23 @@
+service:
+  airports:
+    baseUrl: http://edge:8080/airports
+  flights:
+    baseUrl: http://edge:8080/flights
+  sales:
+    baseUrl: http://edge:8080/sales
+
+hystrix.command.PricingCall.execution.isolation.thread.timeoutInMilliseconds: 2000
+
+hystrix:
+  threadpool:
+    SalesThreads:
+      coreSize: 20
+      maxQueueSize: 200
+      queueSizeRejectionThreshold: 200
+
+JAEGER_AGENT_HOST: jaeger-agent
+JAEGER_AGENT_PORT: 6831
+JAEGER_SERVICE_NAME: presentation
+JAEGER_REPORTER_LOG_SPANS: true
+JAEGER_SAMPLER_TYPE: const
+JAEGER_SAMPLER_PARAM: 1

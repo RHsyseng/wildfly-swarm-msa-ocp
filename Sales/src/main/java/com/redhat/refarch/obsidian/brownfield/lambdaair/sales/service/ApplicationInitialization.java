@@ -1,16 +1,17 @@
 package com.redhat.refarch.obsidian.brownfield.lambdaair.sales.service;
 
-import org.springframework.context.ApplicationListener;
-import org.springframework.context.event.ContextRefreshedEvent;
-import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 
-@Component
-public class ApplicationInitialization implements ApplicationListener<ContextRefreshedEvent>
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
+import javax.servlet.annotation.WebListener;
+
+@WebListener
+public class ApplicationInitialization implements ServletContextListener
 {
+
 	@Override
-	public void onApplicationEvent(ContextRefreshedEvent contextRefreshedEvent)
+	public void contextInitialized(ServletContextEvent sce)
 	{
 		try
 		{
@@ -20,5 +21,11 @@ public class ApplicationInitialization implements ApplicationListener<ContextRef
 		{
 			throw new IllegalStateException( e );
 		}
+	}
+
+	@Override
+	public void contextDestroyed(ServletContextEvent sce)
+	{
+		//Nothing to do
 	}
 }

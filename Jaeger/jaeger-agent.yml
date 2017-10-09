@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Template
+labels:
+  app: jaeger
+  jaeger-infra: jaeger-agent
+metadata:
+  name: jaeger-jaeger-agent
+  labels:
+    app: jaeger
+    jaeger-infra: jaeger-agent
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    name: jaeger-agent
+  spec:
+    replicas: 1
+    template:
+      metadata:
+        labels:
+          app: jaeger
+          jaeger-infra: jaeger-agent
+      spec:
+        containers:
+        - image: jaegertracing/jaeger-agent
+          name: jaeger-agent
+          ports:
+          - containerPort: 5775
+            protocol: UDP
+          - containerPort: 5778
+            protocol: TCP
+          - containerPort: 6831
+            protocol: UDP
+          - containerPort: 6832
+            protocol: UDP
+          command:
+          - "/go/bin/agent-linux"
+          - "--collector.host-port=jaeger-collector:14267"
+    triggers:
+    - type: ConfigChange
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: jaeger-agent
+    labels:
+      app: jaeger
+      jaeger-infra: jaeger-agent
+  spec:
+    ports:
+    - name: jaeger-agent-6831
+      port: 6831
+      protocol: UDP
+      targetPort: 6831
+    selector:
+      jaeger-infra: jaeger-agent
+    type: ClusterIP
+

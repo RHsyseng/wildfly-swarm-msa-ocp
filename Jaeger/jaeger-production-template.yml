@@ -1,0 +1,307 @@
+#
+# Copyright 2017 The Jaeger Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License. You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software distributed under the License
+# is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+# or implied. See the License for the specific language governing permissions and limitations under
+# the License.
+#
+
+parameters:
+- description: The name of the Jaeger Service.
+  displayName: Jaeger Service Name
+  name: JAEGER_SERVICE_NAME
+  required: true
+  value: jaeger
+- description: The Jaeger image version to use
+  displayName: Image version
+  name: IMAGE_VERSION
+  required: false
+  value: "0.6"
+- description: The Cassandra Keyspace for the Jaeger data
+  displayName: Jaeger Cassandra Keyspace
+  name: KEYSPACE
+  required: true
+  value: jaeger_v1_dc1
+- description: The name of the Jaeger Zipkin Service.
+  displayName: Jaeger Zipkin Service Name
+  name: JAEGER_ZIPKIN_SERVICE_NAME
+  required: true
+  value: zipkin
+
+apiVersion: v1
+kind: Template
+labels:
+  app: jaeger
+  template: jaeger-template
+  jaeger-infra: template
+metadata:
+  name: jaeger-template
+  annotations:
+    description: Jaeger Distributed Tracing Server
+    iconClass: icon-go-gopher
+    openshift.io/display-name: Jaeger
+    tags: instant-app,tracing,opentracing,jaeger
+  labels:
+    app: jaeger
+    name: jaeger-infra
+    jaeger-infra: template-production
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: cassandra
+    labels:
+      app: jaeger
+      name: jaeger-cassandra-service
+      jaeger-infra: cassandra-service
+  spec:
+    ports:
+    - port: 7000
+      name: intra-node
+    - port: 7001
+      name: tls-intra-node
+    - port: 7199
+      name: jmx
+    - port: 9042
+      name: cql
+    - port: 9160
+      name: thrift
+    clusterIP: None
+    selector:
+      app: cassandra
+- apiVersion: "apps/v1beta1"
+  kind: StatefulSet
+  metadata:
+    name: cassandra
+    labels:
+      app: jaeger
+      jaeger-infra: cassandra-statefulset
+  spec:
+    serviceName: cassandra
+    replicas: 3
+    template:
+      metadata:
+        labels:
+          app: cassandra
+          jaeger-infra: cassandra-replica
+      spec:
+        terminationGracePeriodSeconds: 1800
+        containers:
+        - name: cassandra
+          image: cassandra:3.11
+          command:
+          - /docker-entrypoint.sh
+          - "-R"
+          ports:
+          - containerPort: 7000
+            name: intra-node
+          - containerPort: 7001
+            name: tls-intra-node
+          - containerPort: 7199
+            name: jmx
+          - containerPort: 9042
+            name: cql
+          - containerPort: 9160
+            name: thrift
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "nodetool drain"]
+          env:
+            - name: MAX_HEAP_SIZE
+              value: 512M
+            - name: HEAP_NEWSIZE
+              value: 100M
+            - name: CASSANDRA_LISTEN_ADDRESS
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: CASSANDRA_CLUSTER_NAME
+              value: "jaeger"
+            - name: CASSANDRA_DC
+              value: "dc1"
+            - name: CASSANDRA_RACK
+              value: "rack1"
+            - name: CASSANDRA_ENDPOINT_SNITCH
+              value: "GossipingPropertyFileSnitch"
+            - name: CASSANDRA_SEEDS
+              value: cassandra-0.cassandra
+          volumeMounts:
+          - name: cassandra-data
+            mountPath: /var/lib/cassandra
+          - name: cassandra-logs
+            mountPath: /var/log/cassandra
+        volumes:
+        - name: cassandra-data
+          emptyDir: {}
+        - name: cassandra-logs
+          emptyDir: {}
+- apiVersion: batch/v1
+  kind: Job
+  metadata:
+    name: jaeger-cassandra-schema-job
+    labels:
+      app: jaeger
+      jaeger-infra: cassandra-schema-job
+  spec:
+    activeDeadlineSeconds: 120
+    template:
+      metadata:
+        name: cassandra-schema
+      spec:
+        containers:
+        - name: jaeger-cassandra-schema
+          image: jaegertracing/jaeger-cassandra-schema:${IMAGE_VERSION}
+          env:
+            - name: MODE
+              value: "prod"
+            - name: DATACENTER
+              value: "dc1"
+        restartPolicy: Never
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    name: ${JAEGER_SERVICE_NAME}-collector
+    labels:
+      app: jaeger
+      jaeger-infra: collector-deployment
+  spec:
+    replicas: 1
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          app: jaeger
+          jaeger-infra: collector-pod
+      spec:
+        containers:
+        - env:
+          - name: COLLECTOR_ZIPKIN_HTTP_PORT
+            value: "9411"
+          image: jaegertracing/jaeger-collector:${IMAGE_VERSION}
+          name: ${JAEGER_SERVICE_NAME}-collector
+          ports:
+          - containerPort: 14267
+            protocol: TCP
+          - containerPort: 14268
+            protocol: TCP
+          - containerPort: 9411
+            protocol: TCP
+          command:
+          - "/go/bin/collector-linux"
+          - "--cassandra.servers=cassandra"
+          - "--cassandra.keyspace=${KEYSPACE}"
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${JAEGER_SERVICE_NAME}-collector
+    labels:
+      app: jaeger
+      jaeger-infra: collector-service
+  spec:
+    ports:
+    - name: jaeger-collector-tchannel
+      port: 14267
+      protocol: TCP
+      targetPort: 14267
+    - name: jaeger-collector-http
+      port: 14268
+      protocol: TCP
+      targetPort: 14268
+    - name: jaeger-collector-zipkin
+      port: 9411
+      protocol: TCP
+      targetPort: 9411
+    selector:
+      jaeger-infra: collector-pod
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${JAEGER_ZIPKIN_SERVICE_NAME}
+    labels:
+      app: jaeger
+      jaeger-infra: zipkin-service
+  spec:
+    ports:
+    - name: jaeger-zipkin-http
+      port: 9411
+      protocol: TCP
+      targetPort: 9411
+    selector:
+      jaeger-infra: collector-pod
+    type: ClusterIP
+- apiVersion: extensions/v1beta1
+  kind: Deployment
+  metadata:
+    name: ${JAEGER_SERVICE_NAME}-query
+    labels:
+      app: jaeger
+      jaeger-infra: query-deployment
+  spec:
+    replicas: 1
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          app: jaeger
+          jaeger-infra: query-pod
+      spec:
+        containers:
+        - image: jaegertracing/jaeger-query:${IMAGE_VERSION}
+          name: ${JAEGER_SERVICE_NAME}-query
+          ports:
+          - containerPort: 16686
+            protocol: TCP
+          command:
+          - "/go/bin/query-linux"
+          - "--cassandra.servers=cassandra"
+          - "--cassandra.keyspace=${KEYSPACE}"
+          - "--query.static-files=/go/jaeger-ui/"
+          readinessProbe:
+            httpGet:
+              path: "/"
+              port: 16686
+            initialDelaySeconds: 5
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${JAEGER_SERVICE_NAME}-query
+    labels:
+      app: jaeger
+      jaeger-infra: query-service
+  spec:
+    ports:
+    - name: jaeger-query
+      port: 80
+      protocol: TCP
+      targetPort: 16686
+    selector:
+      jaeger-infra: query-pod
+    type: LoadBalancer
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: ${JAEGER_SERVICE_NAME}-query
+    labels:
+      app: jaeger
+      jaeger-infra: query-route
+  spec:
+    tls:
+      insecureEdgeTerminationPolicy: Allow
+      termination: edge
+    to:
+      kind: Service
+      name: ${JAEGER_SERVICE_NAME}-query

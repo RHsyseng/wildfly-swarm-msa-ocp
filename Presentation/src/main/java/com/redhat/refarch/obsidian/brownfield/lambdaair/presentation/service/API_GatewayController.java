@@ -36,7 +36,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 
 import io.opentracing.ActiveSpan;
-import io.opentracing.NoopActiveSpanSource;
 import io.opentracing.util.GlobalTracer;
 import rx.Observable;
 
@@ -133,7 +132,7 @@ public class API_GatewayController
 				int batchLimit = Math.min( index + threadSize, itineraries.length );
 				for( int batchIndex = index; batchIndex < batchLimit; batchIndex++ )
 				{
-					observables.add( new PricingCall( itineraries[batchIndex], pricingSpan ).toObservable() );
+					observables.add( new PricingCall( itineraries[batchIndex] ).toObservable() );
 				}
 				logger.info("Will price a batch of " + observables.size() + " tickets");
 				Observable<Itinerary[]> zipped = Observable.zip( observables, objects->
@@ -183,23 +182,18 @@ public class API_GatewayController
 	private class PricingCall extends HystrixCommand<Itinerary>
 	{
 		private Flight flight;
-		private ActiveSpan.Continuation continuation;
 
-		PricingCall(Flight flight, ActiveSpan activeSpan)
+		PricingCall(Flight flight)
 		{
 			super( HystrixCommandGroupKey.Factory.asKey( "Sales" ), HystrixThreadPoolKey.Factory.asKey( "SalesThreads" ) );
 			this.flight = flight;
-			this.continuation = activeSpan != null ? activeSpan.capture() : NoopActiveSpanSource.NoopContinuation.INSTANCE;
 		}
 
 		@Override
 		protected Itinerary run() throws HttpErrorException, ProcessingException
 		{
-			try( ActiveSpan activeSpan = continuation.activate() )
-			{
-				WebTarget webTarget = getWebTarget( "sales", "price" );
-				return invokePost( webTarget, flight, Itinerary.class );
-			}
+			WebTarget webTarget = getWebTarget( "sales", "price" );
+			return invokePost( webTarget, flight, Itinerary.class );
 		}
 
 		@Override

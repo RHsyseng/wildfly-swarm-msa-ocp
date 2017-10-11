@@ -4,3 +4,14 @@ JAEGER_SERVICE_NAME: edge
 JAEGER_REPORTER_LOG_SPANS: true
 JAEGER_SAMPLER_TYPE: const
 JAEGER_SAMPLER_PARAM: 1
+
+edge:
+  proxy:
+    presentation:
+      address: http://presentation:8080
+    airports:
+      address: http://airports:8080
+    flights:
+      address: http://flights:8080
+    sales:
+      address: http://sales:8080

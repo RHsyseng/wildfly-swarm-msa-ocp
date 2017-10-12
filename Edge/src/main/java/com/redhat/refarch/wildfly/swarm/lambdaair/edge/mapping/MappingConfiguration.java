@@ -1,5 +1,6 @@
 package com.redhat.refarch.wildfly.swarm.lambdaair.edge.mapping;
 
+import com.redhat.refarch.wildfly.swarm.lambdaair.edge.mapping.impl.JavaScriptMapper;
 import com.redhat.refarch.wildfly.swarm.lambdaair.edge.mapping.impl.PropertyMapper;
 
 import java.util.ArrayList;
@@ -18,7 +19,14 @@ public class MappingConfiguration
 
 	public MappingConfiguration()
 	{
-		mapperChain.add( PropertyMapper.getInstance() );
+		Mapper[] candidates = new Mapper[]{PropertyMapper.getInstance(), JavaScriptMapper.getInstance()};
+		for( Mapper candidate : candidates )
+		{
+			if( candidate.initialize() )
+			{
+				mapperChain.add( candidate );
+			}
+		}
 	}
 
 	public String getHostAddress(HttpServletRequest request)
@@ -32,11 +40,12 @@ public class MappingConfiguration
 		{
 			Iterator<Mapper> mapperIterator = mapperChain.iterator();
 			String hostAddress = mapperIterator.next().getHostAddress( request, null );
-			logger.fine( "First mapper returned " + hostAddress );
+			logger.fine( "Default mapper returned " + hostAddress );
 			while( mapperIterator.hasNext() )
 			{
-				hostAddress = mapperIterator.next().getHostAddress( request, hostAddress );
-				logger.fine( "Mapper returned " + hostAddress );
+				Mapper mapper = mapperIterator.next();
+				hostAddress = mapper.getHostAddress( request, hostAddress );
+				logger.fine( "Mapper " + mapper + " returned " + hostAddress );
 			}
 			return hostAddress;
 		}

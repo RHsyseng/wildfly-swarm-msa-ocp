@@ -45,7 +45,7 @@ public class JavaScriptMapper extends AbstractMapper
 		}
 		catch( FileNotFoundException e )
 		{
-			logger.log( Level.INFO, JS_FILE_NAME + " JavaScript routing rules not found", e );
+			logger.log( Level.FINE, JS_FILE_NAME + " JavaScript routing rules not found", e );
 			return false;
 		}
 		catch( ScriptException e )

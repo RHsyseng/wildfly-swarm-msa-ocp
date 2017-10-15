@@ -2,125 +2,58 @@ package com.redhat.refarch.wildfly.swarm.lambdaair.edge.service;
 
 import com.redhat.refarch.wildfly.swarm.lambdaair.edge.mapping.MappingConfiguration;
 
-import java.io.BufferedReader;
+import org.apache.http.client.utils.URIUtils;
+import org.mitre.dsmiley.httpproxy.ProxyServlet;
+
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.Map;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.logging.Logger;
 
 import javax.inject.Inject;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
-import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 @WebServlet( name = "Edge", urlPatterns = "/*" )
-public class EdgeService extends HttpServlet
+public class EdgeService extends ProxyServlet
 {
 	private static Logger logger = Logger.getLogger( EdgeService.class.getName() );
+	private static final String ATTR_FULL_URI = EdgeService.class.getName() + ".query";
 
 	@Inject
 	private MappingConfiguration mapping;
 
 	@Override
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+	protected String rewriteUrlFromRequest(HttpServletRequest servletRequest)
 	{
-		handle( request, response, "GET", false );
+		return (String)servletRequest.getAttribute( ATTR_FULL_URI );
 	}
 
 	@Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+	protected void initTarget() throws ServletException
 	{
-		handle( request, response, "POST", true );
+		//No target URI used
 	}
 
 	@Override
-	protected void doHead(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+	protected void service(HttpServletRequest servletRequest, HttpServletResponse servletResponse) throws ServletException, IOException
 	{
-		handle( request, response, "HEAD", false );
-	}
-
-	@Override
-	protected void doPut(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		handle( request, response, "PUT", true );
-	}
-
-	@Override
-	protected void doDelete(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		handle( request, response, "DELETE", false );
-	}
-
-	@Override
-	protected void doOptions(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		handle( request, response, "OPTIONS", false );
-	}
-
-	@Override
-	protected void doTrace(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
-	{
-		handle( request, response, "TRACE", false );
-	}
-
-	private void handle(HttpServletRequest request, HttpServletResponse response, String method, boolean hasBody) throws ServletException, IOException
-	{
-		logger.fine( "Caller IP address is " + request.getHeader( "uberctx-forwarded-for" ) );
-		String url = mapping.getHostAddress( request );
-		HttpURLConnection connection = (HttpURLConnection)new URL( url ).openConnection();
-		Enumeration<String> headerKeys = request.getHeaderNames();
-		while( headerKeys.hasMoreElements() )
+		try
 		{
-			String key = headerKeys.nextElement();
-			Enumeration<String> values = request.getHeaders( key );
-			while( values.hasMoreElements() )
-			{
-				String value = values.nextElement();
-				logger.fine( "Request header " + key + ": " + value );
-				connection.addRequestProperty( key, value );
-			}
+			String fullAddress = mapping.getHostAddress( servletRequest );
+			URI uri = new URI( fullAddress );
+			logger.fine( "Will forward request to " + fullAddress );
+			servletRequest.setAttribute( ATTR_TARGET_HOST, URIUtils.extractHost( uri ) );
+			servletRequest.setAttribute( ATTR_FULL_URI, uri.toString() );
+			URI noQueryURI = new URI( uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), uri.getPath(), null, null );
+			servletRequest.setAttribute( ATTR_TARGET_URI, noQueryURI.toString() );
+			super.service( servletRequest, servletResponse );
 		}
-		connection.setRequestMethod( method );
-		connection.setDoOutput( hasBody );
-		if( hasBody )
+		catch( URISyntaxException e )
 		{
-			BufferedReader body = request.getReader();
-			try( PrintWriter bodyWriter = new PrintWriter( new OutputStreamWriter( connection.getOutputStream() ) ) )
-			{
-				body.lines().forEach( bodyWriter::println );
-			}
-		}
-		int responseCode = connection.getResponseCode();
-		logger.info( "Received " + responseCode + " from " + url + " while forwarding" );
-		for( Map.Entry<String, List<String>> headerEntry : connection.getHeaderFields().entrySet() )
-		{
-			if( headerEntry.getKey() == null )
-			{
-				logger.fine( "Response header null: " + headerEntry.getValue() );
-				continue;
-			}
-			for( String value : headerEntry.getValue() )
-			{
-				logger.fine( "Response header " + headerEntry.getKey() + ": " + value );
-				response.addHeader( headerEntry.getKey(), value );
-			}
-		}
-		if( responseCode < 300 )
-		{
-			BufferedReader bufferedReader = new BufferedReader( new InputStreamReader( connection.getInputStream() ) );
-			bufferedReader.lines().forEach( response.getWriter()::println );
-		}
-		else
-		{
-			response.sendError( responseCode, connection.getResponseMessage() );
+			throw new ServletException( e );
 		}
 	}
 }

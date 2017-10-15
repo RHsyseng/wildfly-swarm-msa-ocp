@@ -70,6 +70,12 @@
             <groupId>org.wildfly.swarm</groupId>
             <artifactId>cdi</artifactId>
         </dependency>
+        <!-- Extensible OSS reverse proxy implementation -->
+        <dependency>
+            <groupId>org.mitre.dsmiley.httpproxy</groupId>
+            <artifactId>smiley-http-proxy-servlet</artifactId>
+            <version>1.9</version>
+        </dependency>
     </dependencies>
 
     <profiles>

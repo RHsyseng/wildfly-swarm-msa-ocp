@@ -15,10 +15,6 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 import javax.servlet.http.HttpServletRequest;
 
-import io.opentracing.ActiveSpan;
-import io.opentracing.Tracer;
-import io.opentracing.util.GlobalTracer;
-
 public class JavaScriptMapper extends AbstractMapper
 {
 	private static Logger logger = Logger.getLogger( JavaScriptMapper.class.getName() );
@@ -86,19 +82,9 @@ public class JavaScriptMapper extends AbstractMapper
 		}
 	}
 
-	public String getBaggageItem(String key)
+	public String getBaggageItem(HttpServletRequest request, String key)
 	{
-		Tracer tracer = GlobalTracer.get();
-		if( tracer != null )
-		{
-			ActiveSpan activeSpan = tracer.activeSpan();
-			if( activeSpan != null )
-			{
-				return activeSpan.getBaggageItem( key );
-			}
-		}
-		//Otherwise:
-		return null;
+		return request.getHeader( "uberctx-" + key );
 	}
 
 	public void info(Object message)

@@ -1,6 +1,6 @@
 if( mapper.getServiceName( request ) == "sales" )
 {
-	var ipAddress = mapper.getBaggageItem( "forwarded-for" );
+	var ipAddress = mapper.getBaggageItem( request, "forwarded-for" );
 	mapper.fine( 'Got IP Address as ' + ipAddress );
 	if( ipAddress )
 	{

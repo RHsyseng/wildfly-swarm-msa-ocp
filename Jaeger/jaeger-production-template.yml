@@ -139,9 +139,11 @@ objects:
             mountPath: /var/log/cassandra
         volumes:
         - name: cassandra-data
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: cassandra-data
         - name: cassandra-logs
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: cassandra-logs
 - apiVersion: batch/v1
   kind: Job
   metadata:

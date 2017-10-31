@@ -13,7 +13,9 @@
     <description>Lambda Air Airport Information Service</description>
 
     <properties>
-        <version.wildfly.swarm>2017.10.0</version.wildfly.swarm>
+        <version.wildfly.swarm>7.0.0.redhat-6</version.wildfly.swarm>
+        <!-- Used for community-only fractions -->
+        <version.wildfly.swarm.community>2017.10.0</version.wildfly.swarm.community>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <failOnMissingWebXml>false</failOnMissingWebXml>
@@ -27,7 +29,7 @@
         <dependencies>
             <dependency>
                 <groupId>org.wildfly.swarm</groupId>
-                <artifactId>bom-all</artifactId>
+                <artifactId>bom</artifactId>
                 <version>${version.wildfly.swarm}</version>
                 <scope>import</scope>
                 <type>pom</type>
@@ -69,10 +71,11 @@
             <groupId>org.wildfly.swarm</groupId>
             <artifactId>jaxrs</artifactId>
         </dependency>
-        <!-- Jaeger OpenTracing -->
+        <!-- Community fraction - Jaeger OpenTracing -->
         <dependency>
             <groupId>org.wildfly.swarm</groupId>
             <artifactId>jaeger</artifactId>
+            <version>${version.wildfly.swarm.community}</version>
         </dependency>
     </dependencies>
 
@@ -125,4 +128,21 @@
             </build>
         </profile>
     </profiles>
+
+    <!-- Replace with GA when released -->
+    <repositories>
+       <repository>
+          <id>redhat-early-access</id>
+          <name>Redhat Early Access Repository</name>
+          <url>https://maven.repository.redhat.com/earlyaccess/all/</url>
+       </repository>
+    </repositories>
+    <pluginRepositories>
+       <pluginRepository>
+          <id>redhat-early-access</id>
+          <name>Redhat Early Access Repository</name>
+          <url>https://maven.repository.redhat.com/earlyaccess/all/</url>
+       </pluginRepository>
+    </pluginRepositories>
+
 </project>

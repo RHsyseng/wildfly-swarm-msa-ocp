@@ -36,6 +36,13 @@ objects:
           command:
           - "/go/bin/agent-linux"
           - "--collector.host-port=jaeger-collector:14267"
+          resources:
+            limits:
+              cpu: "400m"
+              memory: "400Mi"
+            requests:
+              cpu: "200m"
+              memory: "200Mi"
     triggers:
     - type: ConfigChange
 - apiVersion: v1

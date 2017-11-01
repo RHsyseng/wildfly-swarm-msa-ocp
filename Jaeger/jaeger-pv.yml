@@ -5,27 +5,79 @@ items:
 - apiVersion: v1
   kind: PersistentVolume
   metadata:
-    name: cassandra-data
+    name: cassandra-pv-1
   spec:
     accessModes:
     - ReadWriteOnce
     capacity:
       storage: 1Gi
     nfs:
-      path: /mnt/wildfly-swarm/cassandra-data
+      path: /mnt/wildfly-swarm/cassandra/1
       server: 10.19.137.41
     persistentVolumeReclaimPolicy: Recycle
-
 - apiVersion: v1
   kind: PersistentVolume
   metadata:
-    name: cassandra-logs
+    name: cassandra-pv-2
   spec:
     accessModes:
     - ReadWriteOnce
     capacity:
       storage: 1Gi
     nfs:
-      path: /mnt/wildfly-swarm/cassandra-logs
+      path: /mnt/wildfly-swarm/cassandra/2
       server: 10.19.137.41
     persistentVolumeReclaimPolicy: Recycle
+- apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: cassandra-pv-3
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 1Gi
+    nfs:
+      path: /mnt/wildfly-swarm/cassandra/3
+      server: 10.19.137.41
+    persistentVolumeReclaimPolicy: Recycle
+- apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: cassandra-pv-4
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 1Gi
+    nfs:
+      path: /mnt/wildfly-swarm/cassandra/4
+      server: 10.19.137.41
+    persistentVolumeReclaimPolicy: Recycle
+- apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: cassandra-pv-5
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 1Gi
+    nfs:
+      path: /mnt/wildfly-swarm/cassandra/5
+      server: 10.19.137.41
+    persistentVolumeReclaimPolicy: Recycle
+- apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    name: cassandra-pv-6
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 1Gi
+    nfs:
+      path: /mnt/wildfly-swarm/cassandra/6
+      server: 10.19.137.41
+    persistentVolumeReclaimPolicy: Recycle
+

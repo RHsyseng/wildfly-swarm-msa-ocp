@@ -137,13 +137,21 @@ objects:
             mountPath: /var/lib/cassandra
           - name: cassandra-logs
             mountPath: /var/log/cassandra
-        volumes:
-        - name: cassandra-data
-          persistentVolumeClaim:
-            claimName: cassandra-data
-        - name: cassandra-logs
-          persistentVolumeClaim:
-            claimName: cassandra-logs
+    volumeClaimTemplates:
+    - metadata:
+        name: cassandra-data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi
+    - metadata:
+        name: cassandra-logs
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        resources:
+          requests:
+            storage: 1Gi
 - apiVersion: batch/v1
   kind: Job
   metadata:
@@ -307,3 +315,4 @@ objects:
     to:
       kind: Service
       name: ${JAEGER_SERVICE_NAME}-query
+

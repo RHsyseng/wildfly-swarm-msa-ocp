@@ -23,7 +23,7 @@ public class Controller
 	@Produces(MediaType.APPLICATION_JSON)
 	public Collection<Airport> airports(@QueryParam( "filter" ) String filter)
 	{
-		GlobalTracer.get().activeSpan().setTag( "Operation", "Look Up Airports" );//TODO inject?
+		GlobalTracer.get().activeSpan().setTag( "Operation", "Look Up Airports" );
 		if( filter == null || filter.isEmpty() )
 		{
 			return AirportsService.getAirports();
@@ -39,7 +39,7 @@ public class Controller
 	@Produces(MediaType.APPLICATION_JSON)
 	public Airport getAirport(@PathParam("code") String code)
 	{
-		GlobalTracer.get().activeSpan().setTag( "Operation", "Look Up Single Airport" );//TODO inject?
+		GlobalTracer.get().activeSpan().setTag( "Operation", "Look Up Single Airport" );
 		return AirportsService.getAirport( code.toUpperCase( Locale.US ) );
 	}
 }

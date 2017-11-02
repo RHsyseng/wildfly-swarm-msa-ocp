@@ -26,7 +26,7 @@ public class Controller
 	@Produces( MediaType.APPLICATION_JSON)
 	public Itinerary price(Flight flight)
 	{
-		GlobalTracer.get().activeSpan().setTag( "Operation", "Determine Price for a Flight" );//TODO inject?
+		GlobalTracer.get().activeSpan().setTag( "Operation", "Determine Price for a Flight" );
 		Itinerary itinerary = SalesTicketingService.price( flight );
 		logger.info("Priced ticket at " + itinerary.getPrice() );
 		return itinerary;

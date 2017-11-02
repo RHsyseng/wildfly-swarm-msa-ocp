@@ -39,7 +39,7 @@ public class Controller
 	@Produces( MediaType.APPLICATION_JSON)
 	public List<Flight> query(@QueryParam( "date" ) String date, @QueryParam( "origin" ) String origin, @QueryParam( "destination" ) String destination) throws HttpErrorException, ProcessingException
 	{
-		GlobalTracer.get().activeSpan().setTag( "Operation", "Look Up Flights" );//TODO inject?
+		GlobalTracer.get().activeSpan().setTag( "Operation", "Look Up Flights" );
 		Map<String, Airport> airports = new HashMap<>();
 		WebTarget webTarget = RestClient.getWebTarget( "airports", "airports" );
 		Airport[] airportArray = RestClient.invokeGet( webTarget, Airport[].class );

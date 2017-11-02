@@ -58,7 +58,7 @@ public class API_GatewayController
 	@Produces( MediaType.APPLICATION_JSON)
 	public String[] airports() throws HttpErrorException, ProcessingException
 	{
-		GlobalTracer.get().activeSpan().setTag( "Operation", "Look Up Airport Codes" );//TODO inject?
+		GlobalTracer.get().activeSpan().setTag( "Operation", "Look Up Airport Codes" );
 		WebTarget webTarget = getWebTarget( "airports", "airports" );
 		Airport[] airports = invokeGet( webTarget, Airport[].class );
 		String[] airportDescriptors = new String[airports.length];
@@ -75,7 +75,7 @@ public class API_GatewayController
 	@Produces( MediaType.APPLICATION_JSON)
 	public List<Itinerary> query(@QueryParam( "departureDate" ) String departureDate, @QueryParam( "returnDate" ) String returnDate, @QueryParam( "origin" ) String origin, @QueryParam( "destination" ) String destination, @Context HttpServletRequest request) throws HttpErrorException, ProcessingException
 	{
-		ActiveSpan querySpan = GlobalTracer.get().activeSpan(); //TODO inject tracer?
+		ActiveSpan querySpan = GlobalTracer.get().activeSpan();
 		querySpan.setTag( "Operation", "Itinerary Query" );
 		querySpan.setBaggageItem( "forwarded-for", request.getHeader( "x-forwarded-for" ) );
 		long queryTime = System.currentTimeMillis();
@@ -122,7 +122,7 @@ public class API_GatewayController
 
 	private @NotNull List<Itinerary> getPricing(Flight[] itineraries)
 	{
-		try( ActiveSpan pricingSpan = GlobalTracer.get().buildSpan( "Itinerary Pricing" ).startActive() ) //TODO inject tracer?
+		try( ActiveSpan pricingSpan = GlobalTracer.get().buildSpan( "Itinerary Pricing" ).startActive() )
 		{
 			long pricingTime = System.currentTimeMillis();
 			List<Itinerary> pricedItineraries = new ArrayList<>();

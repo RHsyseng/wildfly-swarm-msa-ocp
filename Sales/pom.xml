@@ -13,7 +13,7 @@
     <description>Lambda Air Flight Sales System</description>
 
     <properties>
-        <version.wildfly.swarm>7.0.0.redhat-6</version.wildfly.swarm>
+        <version.wildfly.swarm>7.0.0.redhat-8</version.wildfly.swarm>
         <!-- Used for community-only fractions -->
         <version.wildfly.swarm.community>2017.10.0</version.wildfly.swarm.community>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -129,19 +129,18 @@
         </profile>
     </profiles>
 
-    <!-- Replace with GA when released -->
     <repositories>
        <repository>
-          <id>redhat-early-access</id>
-          <name>Redhat Early Access Repository</name>
-          <url>https://maven.repository.redhat.com/earlyaccess/all/</url>
+          <id>redhat-ga-repository</id>
+          <name>Redhat GA Repository</name>
+          <url>https://maven.repository.redhat.com/ga/all/</url>
        </repository>
     </repositories>
     <pluginRepositories>
        <pluginRepository>
-          <id>redhat-early-access</id>
-          <name>Redhat Early Access Repository</name>
-          <url>https://maven.repository.redhat.com/earlyaccess/all/</url>
+          <id>redhat-ga-repository</id>
+          <name>Redhat GA Repository</name>
+          <url>https://maven.repository.redhat.com/ga/all/</url>
        </pluginRepository>
     </pluginRepositories>
 

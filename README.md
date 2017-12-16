@@ -1,6 +1,10 @@
 # Overview
 This repository contains the microservices application described, designed, and documented in the Red Hat reference architecture titled [WildFly Swarm Microservices on Red Hat OpenShift Container Platform 3](https://access.redhat.com/documentation/en-us/reference_architectures/2017/html/wildfly_swarm_microservices_on_red_hat_openshift_container_platform_3/)
 
+Overview video quickly runs through some features of this reference architecture application:
+
+[![WildFly Swarm Microservices](http://img.youtube.com/vi/-h3GWKnhIMQ/2.jpg)](http://www.youtube.com/watch?v=-h3GWKnhIMQ)
+
 # Build and Deployment
 First, clone this repository:
 
